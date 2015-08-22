@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="UTF-8">
+    <title>DriveWire information by tormod.me</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/tormod.css" media="screen">
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">tormod.me</h1>
+      <h2 class="project-tagline">machine extensions by Tormod</h2>
+    </section>
+
+    <section class="main-content">
+
+<h1>
+<a id="drivewire-for-your-dragon" class="anchor" href="#drivewire-for-your-dragon" aria-hidden="true"><span class="octicon octicon-link"></span></a>About DriveWire</h1>
+
+<h2>Overview</h2>
+<p>
+DriveWire is a way to connect your Dragon to a PC.
+It allows you to transfer files from the PC to your Dragon, or to use the PC as a virtual disk for the Dragon.
+A server program runs on the PC and services requests from the Dragon.
+Instead of a PC, a stand-alone DriveWire server like uDW can be used.
+</p>
+
+<h2>DriveWire software</h2>
+<p>DriveWire on the Dragon uses the printer port. On the Dragon, software is needed that can "talk" to the DriveWire server through the printer port.
+Operating systems like HDB-DOS and NitrOS-9 have support for DriveWire, and can use the DriveWire server as a full replacement for a normal floppy or hard disk drive.
+</p>
+
+<p>
+For Dragon there is also DWLOAD - a small program that can be used to load programs from the DriveWire server without needing a disk operating system. DWLOAD can be embedded in a modified BASIC ROM, replacing the "DLOAD" command.
+</p>
+
+<h2>HDB-DOS</h2>
+<p>
+HDB-DOS has its roots in the Disk Enhanced Color Basic (DECB) for Tandy Color Computers, and is compatible with the Tandy floppy drive controllers. It adds support for hard drives and for virtual disks over DriveWire.
+</p>
+
+<p>
+When HDB-DOS was ported to Dragon, it became possible for Dragon users to use DriveWire and Tandy floppy drives on the Dragon, while keeping the Dragon BASIC. Note that it doesn't support Dragon floppy drive controllers.
+</p>
+
+<h2>NitrOS-9</h2>
+NitrOS-9 is an open-source multi-tasking operating system for Dragon and Tandy Color Computers. It was initially based on OS-9 from Microware, and remains mostly compatible.
+
+<h2>DWLOAD</h2>
+<p>
+DWLOAD is designed to be so small that it fits into unused parts of the Dragon BASIC ROM. Nonetheless, it allows you to simply download and run files from the DriveWire server from within BASIC without any resident use of memory.
+DWLOAD can be enhanced by "DriveWire Executable Extension Blocks" (dweebs) which are small program loaded from the server to provide further DriveWire capabilities on demand.
+Some examples are "VLOAD" to load files from VDK images residing on the DriveWire server, "LROM" to load a ROM image into high RAM, and "DOS" to boot NitrOS-9 over DriveWire.
+<p>
+
+<p>
+DWLOAD can also be used together with HDB-DOS or Dragon DOS. You can for instance load files from the PC (plain files or from inside VDK images) and save them on your Dragon DOS floppy drive. Or load files from your Dragon DOS floppy drive and save them on the PC (currently only BASIC files supported via the "SAVE" dweeb).
+</p>
+
+<h2>Requirements</h2>
+<p>
+In addition to your Dragon 32 or Dragon 64 or compatible home computer you will need either
+</p>
+<ul>
+<li>DriveWire adapter + PC running DriveWire server (DW4)
+</ul>
+or
+<ul>
+<li>uDW microserver
+</ul>
+
+<p>
+Of course, on the Dragon you will need DriveWire software. If you have the DWLOAD EPROM you are all set and can load everything (also HDB-DOS or NitrOS-9) via DriveWire. Otherwise, software (including a DWLOAD program) can be loaded from disk or cassette tape to get started.
+</p>
+
+
+<a href="products.html">
+<table class="gallery">
+<tr>
+<td><img src="udw.jpg" alt="uDW">
+<td><img src="dw-adapter.jpg" alt="DriveWire adapter">
+<td><img src="dwload.jpg" alt="DWLOAD EPROM">
+</tr>
+</table>
+<p>
+Take me to the product list
+</p>
+</a>
+
+<h2>DriveWire software for Dragon</h2>
+
+<ul>
+<li>DWLOAD - the easiest way to use DriveWire
+<a class="xlink" href="http://archive.worldofdragon.org/phpBB3/viewtopic.php?f=5&amp;t=4964">link</a>
+</li>
+<li>HDBDOS ported to Dragon 32 (can also run from RAM)
+<a class="xlink" href="http://archive.worldofdragon.org/phpBB3/viewtopic.php?f=5&amp;t=4224">link</a>
+</li>
+<li>NitrOS-9 for your Dragon 32 (memory extension recommended)
+<a class="xlink" href="http://archive.worldofdragon.org/phpBB3/viewtopic.php?f=5&amp;t=4795">link</a>
+</li>
+<li>FUZIX for Dragon or CoCo2 (work in progress, additional hardware needed)
+<a class="xlink" href="https://github.com/EtchedPixels/FUZIX/tree/master/Kernel/platform-dragon-nx32">link</a>
+</li>
+</ul>
+
+<p>This software can be downloaded for free and is open-source. See the respective web sites for licensing and authorship. There are many contributors, in some cases I am the project maintainer, and/or have written the Dragon port.</p>
+
+<h2>DriveWire server software</h2>
+<p>
+For running a DriveWire server on an external computer. Not needed when using the uDW.
+</p>
+<ul>
+<li><a class="xlink" href="https://sites.google.com/site/drivewire4/">DW4</a> - Drivewire server for Windows/Mac/Linux</li>
+<li><a class="xlink" href="http://www.frontiernet.net/~mmarlette/Cloud-9/Software/DriveWire3.html">DW3</a> - original Drivewire server from Cloud9</li>
+</ul>
+
+<h2>More links</h2>
+<p>For more information on Dragon computers and a vital community, please see
+the excellent <a class="xlink" href="http://archive.worldofdragon.org">World of Dragon</a>
+web site.
+The wiki contains more
+<a class="xlink" href="http://archive.worldofdragon.org/index.php?title=Category:Drivewire">DriveWire information</a>.
+
+</p>
+
+<h2>Acknowledgements</h2>
+<p>
+DriveWire was initially developed by Boisy Pitre and Aaron Wolfe from <a class="xlink" href="http://www.cloud9tech.com/">Cloud-9</a> for HDB-DOS and NitrOS-9 on the Tandy Color Computer. The bitbanger routines for CoCo 2, also used on the Dragon, were written by Darren Atkinson.
+</p>
+
+      <footer class="site-footer">
+
+        <span class="site-footer-credits">Copyright 2015 Tormod Volden. This page was originally generated by <a href="https://pages.github.com">GitHub Pages</a> based on the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
+
+    </section>
+
+
+  </body>
+</html>
+
