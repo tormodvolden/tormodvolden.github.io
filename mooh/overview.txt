@@ -1,0 +1,17 @@
+The MOOH memory and SPI cartridge board
+
+The MOOH board for Dragon and Tandy CoCo 1/2 computers provides 512 KB of extra RAM and an SPI interface including a micro-SD card slot.
+
+The RAM is organized in 64 banks of 8 KB which can be mapped anywhere in the 64 KB memory space of the microprocessor.
+
+The SPI interface is based on Daryl Rictor's 65SPI design with André Fachat's modifications (rev 4/B 1.1). It acts as SPI master and allows 4 SPI slaves with individual MISO inputs. The 4 slave select lines can alternatively be externally decoded to allow up to 15 slaves with minimum hardware additions. The on-board micro-SD card slot is connected to slave number 0. Connections for 3 other slaves are available on the 20-pin "SPI" header.
+
+A 20-pin "AUX" extension header is provided for add-on boards, and includes a chip enable signal decoded at $FF68-$FF6B.
+
+Installation
+Always power off the Dragon before inserting or removing the memory board!
+
+Slide the board into the cartridge port on the right hand side of the Dragon. The printed side with components should face up. Ensure it is well seated before powering on the Dragon.
+
+When the board is not in use, store it in an anti-static bag to protect its components against static discharge. Don't let your cat play with it on a dry winter day!
+

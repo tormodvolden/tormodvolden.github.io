@@ -1,0 +1,30 @@
+Memory management
+
+The memory management unit (MMU) is very similar to the one inside the Tandy CoCo 3.
+
+The 512 MB of board memory is divided in 64 pages of 8 KB. The board has two sets of 8 mapping registers, at $FFA0-$FFAF. These are also called DAT (dynamic address translation) registers. Each set correspond to a task. Each register corresponds to an 8 KB slot in the memory space. The content of the register dictates which of the memory pages is mapped to the corresponding memory slot when the MMU is enabled.
+
+Task 0	Task 1	Address
+$FFA0	$FFA8	$0000 - $1FFF
+$FFA1	$FFA9	$2000 - $3FFF
+$FFA2	$FFAA	$4000 - $5FFF
+$FFA3	$FFAB	$6000 - $7FFF
+$FFA4	$FFAC	$8000 - $9FFF
+$FFA5	$FFAD	$A000 - $BFFF
+$FFA6	$FFAE	$C000 - $DFFF
+$FFA7	$FFAF	$E000 - $FEFF
+
+Addresses $FF00-$FFF0 will always access the I/O page of the Dragon, regardless of the memory mapping.
+
+The MMU control register is at $FF90. Bit 6 enables the MMU. Bit 3 enables the CRM (common reserved memory a.k.a. vector page) at $FFE0-$FFEF. Bit 0 of $FF91 selects which of task 0 or 1 is active.
+Example:
+POKE &HFF90,64
+POKE &HFFA6,62
+=> The page number 62 will now be available at $C000-$DFFF.
+
+The value $3F has a special meaning for the DAT registers. Instead of mapping a page from the board memory, it will expose the internal memory at the corresponding memory range, for address ranges $0000-$DFFF. However, the same value in $FFA7 (or $FFAF in task 1) maps page $3F (63, the last page) at address slot $E000-$FEFF.
+
+The value $3F is also the default value for all the DAT registers, so after reset or power-on, simply enabling the MMU will cause page 63 to be mapped at $E000-$FEFF while the rest of the memory map is unchanged.
+
+Enabling the CRM (vector page) causes a common 256-byte page to be mapped at $FE00-$FEFF, regardless of the value in $FFA7 or $FFAF. This is often used for interrupt handling routines which should be accessible in all situations. On the MOOH the last 16 bytes of the CRM page are mirrored at $FFF0-$FFFF, effectively making the CPU interrupt vectors writeable. This is a difference from the CoCo 3, where the CPU vectors at $FFF0-$FFFF are mirrored from ROM, and points to secondary vectors in the last 24 bytes of the CRM page.
+

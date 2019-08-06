@@ -1,0 +1,280 @@
+Modification of the control logic
+
+The CPLD logic configuration used for address decoding, memory bank selection and the SPI interface (shift and control registers) can be updated over JTAG using a Xilinx-compatible programmer. Original JED or XSVF files are available.
+
+The pinout of the JTAG connectors are:
+1. 3V3 (square pin)
+2. GND
+3. TCK
+4. TDO
+5. TDI
+6. TMS
+
+
+
+
+
+VHDL implementation
+The below VHDL code describes the MOOH internal address decoding and control register logic controlling the memory.
+
+
+-- Copyright 2016-2018 Tormod Volden
+-- MMU for Dragon and CoCo 1/2
+-- 8KB flexible banks (8 segments in CPU space)
+-- 6-bit task registers (for up to 512 KB)
+-- Target CPLD: Xilinx XC95144XL-10TQ100
+
+-- Task registers for 2 tasks at FFA0-FFA7 and FFA8-FFAF
+-- Control registers:
+--     FF90 bit 6 - enable MMU
+--     FF90 bit 3 - enable Common Reserved Memory vector page at FExx
+--     FF91 bit 0 - task map selection
+
+-- The last bank 0x3F is used for the CRM, and can only be mapped at 0xE000
+-- (task registers FFA7 and FFAF). The bank number 0x3F will at other places
+-- result in windowing to internal RAM/ROM (external memory mapped out).
+
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.NUMERIC_STD.ALL;
+
+entity mooh is
+
+    Port (
+        CPU_A : in STD_LOGIC_VECTOR (15 downto 0);
+        CPU_D : inout STD_LOGIC_VECTOR (7 downto 0);
+        E : in STD_LOGIC;
+        Q : in STD_LOGIC;
+        RnW : in STD_LOGIC;
+        nRST: in STD_LOGIC;
+        MEM_A : out STD_LOGIC_VECTOR (5 downto 0); -- A13..A18
+        MEM_A8 : out STD_LOGIC; -- for CRM page in "FF" instead of "FE"
+        MEM_nCE : out STD_LOGIC;
+        MEM_nOE : out STD_LOGIC;
+        MEM_nWE : out STD_LOGIC;
+        ROM_A : out STD_LOGIC_VECTOR (15 downto 13);
+        nSLENB : out STD_LOGIC;
+        nXEN : OUT STD_LOGIC; -- SPI
+        nXEN2 : OUT STD_LOGIC; -- AUX
+        nXRST : OUT STD_LOGIC -- buffered reset
+    );
+
+    constant TR_WIDTH : integer := 6;
+
+end mooh;
+
+architecture Behavioral of mooh is
+        -- signal TY : STD_LOGIC; -- SAM map type
+        -- signal a_FFDE_F : STD_LOGIC;
+        signal a_FFxx   : STD_LOGIC;
+        signal a_FF68_B : STD_LOGIC;
+        signal a_FF6C_F : STD_LOGIC;
+        signal a_CRM    : STD_LOGIC;
+        signal a_VECT   : STD_LOGIC;
+        signal a_FFAx   : STD_LOGIC;
+        signal a_FF90_1 : STD_LOGIC;
+        signal TR_R : STD_LOGIC;
+        signal TR0  : STD_LOGIC_VECTOR (TR_WIDTH-1 downto 0);
+        signal TR1  : STD_LOGIC_VECTOR (TR_WIDTH-1 downto 0);
+        signal TR2  : STD_LOGIC_VECTOR (TR_WIDTH-1 downto 0);
+        signal TR3  : STD_LOGIC_VECTOR (TR_WIDTH-1 downto 0);
+        signal TR4  : STD_LOGIC_VECTOR (TR_WIDTH-1 downto 0);
+        signal TR5  : STD_LOGIC_VECTOR (TR_WIDTH-1 downto 0);
+        signal TR6  : STD_LOGIC_VECTOR (TR_WIDTH-1 downto 0);
+        signal TR7  : STD_LOGIC_VECTOR (TR_WIDTH-1 downto 0);
+        signal TR8  : STD_LOGIC_VECTOR (TR_WIDTH-1 downto 0);
+        signal TR9  : STD_LOGIC_VECTOR (TR_WIDTH-1 downto 0);
+        signal TRa  : STD_LOGIC_VECTOR (TR_WIDTH-1 downto 0);
+        signal TRb  : STD_LOGIC_VECTOR (TR_WIDTH-1 downto 0);
+        signal TRc  : STD_LOGIC_VECTOR (TR_WIDTH-1 downto 0);
+        signal TRd  : STD_LOGIC_VECTOR (TR_WIDTH-1 downto 0);
+        signal TRe  : STD_LOGIC_VECTOR (TR_WIDTH-1 downto 0);
+        signal TRf  : STD_LOGIC_VECTOR (TR_WIDTH-1 downto 0);
+        signal BANK : STD_LOGIC_VECTOR (TR_WIDTH-1 downto 0);
+        signal ROMB : STD_LOGIC_VECTOR (4 downto 0);
+        signal D_OUT: STD_LOGIC_VECTOR (7 downto 0);
+        signal nMEM    : STD_LOGIC;
+        signal nSLENBi : STD_LOGIC;
+        signal MMU_EN  : STD_LOGIC;
+        signal TASK_SEL: STD_LOGIC;
+        signal CRM_EN  : STD_LOGIC;
+
+begin
+        a_FFxx   <= '1' when CPU_A(15 downto 8) = "11111111" else '0';
+        a_CRM    <= '1' when CPU_A(15 downto 8) = "11111110" else '0'; -- FExx
+        a_VECT   <= '1' when a_FFxx = '1' and CPU_A(7 downto 4) = "1111" else '0'; -- FFFx
+        a_FFAx   <= '1' when a_FFxx = '1' and CPU_A(7 downto 4) = "1010" else '0';
+        a_FF90_1 <= '1' when a_FFxx = '1' and CPU_A(7 downto 1) = "1001000" else '0';
+        a_FF68_B <= '1' when a_FFxx = '1' and CPU_A(7 downto 2) = "011010" else '0';
+        a_FF6C_F <= '1' when a_FFxx = '1' and CPU_A(7 downto 2) = "011011" else '0';
+
+        -- extra device enables
+        nXEN <= not (a_FF6C_F and (E or Q)); -- SPI
+        nXEN2 <= not (a_FF68_B and (E or Q)); -- AUX
+        nXRST <= nRST;
+
+        -- writing to task registers
+        process (nRST, Q, a_FFAx, E, RnW)
+        begin
+            if (nRST = '0') then
+                TR0 <= ( others => '1' ); -- default to 0x3F
+                TR1 <= ( others => '1' );
+                TR2 <= ( others => '1' );
+                TR3 <= ( others => '1' );
+                TR4 <= ( others => '1' );
+                TR5 <= ( others => '1' );
+                TR6 <= ( others => '1' );
+                TR7 <= ( others => '1' );
+                TR8 <= ( others => '1' );
+                TR9 <= ( others => '1' );
+                TRa <= ( others => '1' );
+                TRb <= ( others => '1' );
+                TRc <= ( others => '1' );
+                TRd <= ( others => '1' );
+                TRe <= ( others => '1' );
+                TRf <= ( others => '1' );
+            elsif (falling_edge(Q) and a_FFAx = '1' and RnW = '0') then
+                case CPU_A(3 downto 0) is
+                    when "0000" => TR0 <= CPU_D(TR_WIDTH-1 downto 0);
+                    when "0001" => TR1 <= CPU_D(TR_WIDTH-1 downto 0);
+                    when "0010" => TR2 <= CPU_D(TR_WIDTH-1 downto 0);
+                    when "0011" => TR3 <= CPU_D(TR_WIDTH-1 downto 0);
+                    when "0100" => TR4 <= CPU_D(TR_WIDTH-1 downto 0);
+                    when "0101" => TR5 <= CPU_D(TR_WIDTH-1 downto 0);
+                    when "0110" => TR6 <= CPU_D(TR_WIDTH-1 downto 0);
+                    when "0111" => TR7 <= CPU_D(TR_WIDTH-1 downto 0);
+                    when "1000" => TR8 <= CPU_D(TR_WIDTH-1 downto 0);
+                    when "1001" => TR9 <= CPU_D(TR_WIDTH-1 downto 0);
+                    when "1010" => TRa <= CPU_D(TR_WIDTH-1 downto 0);
+                    when "1011" => TRb <= CPU_D(TR_WIDTH-1 downto 0);
+                    when "1100" => TRc <= CPU_D(TR_WIDTH-1 downto 0);
+                    when "1101" => TRd <= CPU_D(TR_WIDTH-1 downto 0);
+                    when "1110" => TRe <= CPU_D(TR_WIDTH-1 downto 0);
+                    when "1111" => TRf <= CPU_D(TR_WIDTH-1 downto 0);
+                    when others =>
+                end case;
+            end if;
+        end process;
+
+        -- reading out task registers
+        TR_R     <= '1' when a_FFAx = '1' and E = '1' and RnW = '1' else '0';
+
+        process(a_FFAx, E, RnW)
+        begin
+            if (TR_R = '1') then
+                D_OUT(7 downto TR_WIDTH) <= (others => '0');
+                case CPU_A(3 downto 0) is
+                    when "0000" => D_OUT(TR_WIDTH-1 downto 0) <= TR0;
+                    when "0001" => D_OUT(TR_WIDTH-1 downto 0) <= TR1;
+                    when "0010" => D_OUT(TR_WIDTH-1 downto 0) <= TR2;
+                    when "0011" => D_OUT(TR_WIDTH-1 downto 0) <= TR3;
+                    when "0100" => D_OUT(TR_WIDTH-1 downto 0) <= TR4;
+                    when "0101" => D_OUT(TR_WIDTH-1 downto 0) <= TR5;
+                    when "0110" => D_OUT(TR_WIDTH-1 downto 0) <= TR6;
+                    when "0111" => D_OUT(TR_WIDTH-1 downto 0) <= TR7;
+                    when "1000" => D_OUT(TR_WIDTH-1 downto 0) <= TR8;
+                    when "1001" => D_OUT(TR_WIDTH-1 downto 0) <= TR9;
+                    when "1010" => D_OUT(TR_WIDTH-1 downto 0) <= TRa;
+                    when "1011" => D_OUT(TR_WIDTH-1 downto 0) <= TRb;
+                    when "1100" => D_OUT(TR_WIDTH-1 downto 0) <= TRc;
+                    when "1101" => D_OUT(TR_WIDTH-1 downto 0) <= TRd;
+                    when "1110" => D_OUT(TR_WIDTH-1 downto 0) <= TRe;
+                    when "1111" => D_OUT(TR_WIDTH-1 downto 0) <= TRf;
+                    when others => D_OUT <= (others => 'X');
+                end case;
+            else
+                D_OUT <= (others => 'X');
+            end if;
+        end process;
+
+        CPU_D <= D_OUT when TR_R = '1' else (others => 'Z');
+
+        -- translation of CPU addresses
+        -- If CRM is enabled, interrupt vectors FFFx are taken from CRM bank
+        process(E)
+        begin
+            if ((E = '1' or Q = '1') and MMU_EN = '1' and (a_FFxx = '0' or (CRM_EN = '1' and a_VECT = '1'))) then
+                if (CRM_EN = '1' and (a_CRM = '1' or a_VECT = '1')) then
+                    BANK <= "111111";
+                else
+                    case TASK_SEL & CPU_A(15 downto 13) is
+                        when "0000" => BANK <= TR0;
+                        when "0001" => BANK <= TR1;
+                        when "0010" => BANK <= TR2;
+                        when "0011" => BANK <= TR3;
+                        when "0100" => BANK <= TR4;
+                        when "0101" => BANK <= TR5;
+                        when "0110" => BANK <= TR6;
+                        when "0111" => BANK <= TR7;
+                        when "1000" => BANK <= TR8;
+                        when "1001" => BANK <= TR9;
+                        when "1010" => BANK <= TRa;
+                        when "1011" => BANK <= TRb;
+                        when "1100" => BANK <= TRc;
+                        when "1101" => BANK <= TRd;
+                        when "1110" => BANK <= TRe;
+                        when "1111" => BANK <= TRf;
+                        when others => BANK <= (others => 'X');
+                    end case;
+                end if;
+            else
+                BANK <= (others => 'X');
+            end if;
+        end process;
+
+        -- Disable internal memory if accessing mapped RAM
+        -- or CRM or shadow vectors stored in last bank
+        -- also allow window to internal RAM/ROM
+        -- Allow bank 0x3F at 0xE000
+        nMEM <= '0' when (E = '1' or Q = '1') and MMU_EN = '1'
+                     and (a_FFxx = '0' or (CRM_EN = '1' and a_VECT = '1'))
+                     and (BANK /= "111111" or (CRM_EN = '1' and (a_CRM = '1' or a_VECT = '1')) or CPU_A(15 downto 13) = "111")
+             else '1';
+        -- or BANK(5 downto 3) /= "111" -- 0x38..0x3F
+        MEM_nCE <= nMEM or not E;
+        MEM_nOE <= nMEM or not E or Q or not RnW;
+        MEM_nWE <= nMEM or not E or Q or RnW;
+        -- also asserted when data should go through an MPI
+        nSLENBi <= nMEM and not ((E or Q) and (a_FFAx or a_FF90_1 or a_FF6C_F or a_FF68_B));
+        nSLENB <= '0' when nSLENBi = '0' else 'Z';
+        MEM_A <= BANK;
+        MEM_A8 <= '1' when CRM_EN = '1' and a_CRM = '1' else CPU_A(8);
+
+        ROM_A(15 downto 14) <= ROMB(2 downto 1);
+        ROM_A(13) <= ROMB(0) when ROMB(3) = '0' else CPU_A(13);
+
+        -- writing to control registers
+        process (nRST, Q, a_FF90_1, E)
+        begin
+            if (nRST = '0') then
+                MMU_EN <= '0';
+                CRM_EN <= '0';
+                TASK_SEL <= '0';
+            elsif (falling_edge(Q) and a_FF90_1 = '1' and RnW = '0') then
+                case CPU_A(0) is
+                    when '0' =>
+                        MMU_EN <= CPU_D(6);
+                        CRM_EN <= CPU_D(3);
+                    when '1' =>
+                        TASK_SEL <= CPU_D(0);
+                    when others =>
+                end case;
+            end if;
+        end process;
+
+        -- read control registers
+        -- todo if needed
+
+        -- write ROM bank register
+        process (nRST, Q, E)
+        begin
+            if (nRST = '0') then
+                ROMB <= ( others => '0' );
+            elsif (falling_edge(Q) and a_FFxx = '1' and CPU_A(7 downto 0) = "01100100" and RnW = '0' and ROMB(4) = '0') then
+                ROMB <= CPU_D(4 downto 0);
+            end if;
+        end process;
+
+end Behavioral;
+
+

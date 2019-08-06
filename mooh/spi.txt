@@ -1,0 +1,22 @@
+SPI interface
+
+The SPI interface uses 4 bytes in the I/O region
+$FF6C DATA in read / DATA out write
+$FF6D Status read / Control write
+$FF6E SCLK Divisor and IRQ Status read / SCLK Divisor write
+$FF6F Slave Select and Interrupt Enable read/write
+
+Status / Control register
+bit 7: TC - Transmission Complete (read only)
+bit 6: IER - Interrupt Enable
+bit 5: BSY - SPI Busy (read only)
+bit 4: FRX - Fast receive mode
+bit 3: TMO - Tri-state MOSI
+bit 2: ECE - External Clock Enable
+bit 1: CPOL - Clock Polarity
+bit 0: CPHA - Clock Phase
+
+Writing to DATA (or reading when FRX is enabled) triggers a byte transfer. Reading or writing DATA will clear the TC, and IRQ line if enabled. The IRQ line is connected to the /CART (cartridge interrupt input) pin on the Dragon cartridge port.
+
+The "internal" clock is the E clock signal from the Dragon, the "external" clock is the on-board 50 MHz oscillator. The clock divisor register (3 bit) allows division between 2 and 16 (2 * value + 2).
+On reset, all register bits are set to zero, except the slave select bits (inverted logic) which are set to 1 (inactive).

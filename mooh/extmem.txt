@@ -1,0 +1,6 @@
+Notes on external memory expansions
+
+The internal 6847 video display generator in the Dragon and CoCo 1 / 2 does not have direct access to the CPU data bus, but accesses the internal memory chips directly with help of the SAM memory multiplexer. This means that the external memory cannot be used as “framebuffer” for video output. Regardless of MMU mapping, the video will be generated from internal memory at the location defined by the SAM registers.
+
+Another consequence of the SAM memory access implementation in the Dragon and CoCo 1 / 2 is that any CPU writes to addresses corresponding to built-in RAM (as per the SAM memory map) will write through to the internal memory, even if the external memory board enables the “EXTMEM” (a.k.a “SLENB”) cartridge port input signal. Care must therefore be taken to avoid overwriting the memory used for video. In SAM map 0 any upper 32K internal memory will be “safe”.
+

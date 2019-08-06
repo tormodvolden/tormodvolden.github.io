@@ -1,0 +1,36 @@
+
+ROM socket
+
+The ROM socket is a 28-pin socket fitting a 27C512 EEPROM or compatible. The ROM will function as a normal cartridge ROM, enabled by the cartridge port R2 (a.k.a. CART) signal, and appearing at $C000-$DFFF. A 27C512 EEPROM can contain 8 banks of 8KB each. The active bank can be selected by writing to bits 0-2 of the ROM selection register at $FF64. Bit 3 will use 16KB banks instead (selected by bits 1-2), appearing at $C000-$FEFF. Bit 4 will lock the ROM selection until power-off (not affected by reset).
+
+
+
+
+Board dimensions
+
+The dimensions of the board are 99 mm x 96 mm including edge connector. The mounting holes are placed to fit a cartridge enclosure for the Tandy FD-502 floppy disk controller or the CoCoSDC.
+
+
+
+Expansion connectors
+
+The MOOH has two unsoldered 2x10 headers (AUX and SPI) for connecting other units.
+
+The SPI header allows connecting 3 additional SPI devices. For each SPI channel there are /SEL, MOSI (shared), MISO, SCK, INT and GND pins. Additionally there are two 3.3V output pins.
+
+“Up”				Outer edge                                    “Down”
+3.3V	MISO1	MOSI	INT1	MISO2	MOSI	INT2	MISO3	MOSI	INT3
+3.3V*	GND	SCK	/SEL1	GND	SCK	/SEL2	GND	SCK	/SEL3
+
+*) Pin marked with arrow
+
+
+The AUX header can be used to connect a typical cartridge type device that would require data bus (d0-d7) and 2 register select bits (a0-a1). A “chip select” signal nXEN2 is enabled for addresses $FF68-$FF6B. Also 5V output, GND, /RESET, R/W, E, Q and P2 pins are available. The /RESET signal is buffered.
+
+“Up”                               Outer edge                                    “Down”
+A0	D6	D4	D2	D0	GND	/W	/RESET	E	5V*
+A1	D7	D5	D3	D1	GND	Q	GND	/XEN2	/P2
+
+*) Pin marked with arrow
+
+
